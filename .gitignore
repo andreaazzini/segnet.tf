@@ -2,3 +2,6 @@ __pycache__/
 logs/
 input/raw/
 input/shuffled/
+
+*.pyc
+vgg16_weights.npz
