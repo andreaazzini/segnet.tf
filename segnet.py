@@ -10,8 +10,8 @@ tf.app.flags.DEFINE_string('train_labels', './input/train_labels.tfrecords', 'Tr
 tf.app.flags.DEFINE_string('train_logs', './logs/train', 'Log directory')
 tf.app.flags.DEFINE_string('labels_file', '../labels', 'Labels file')
 
-tf.app.flags.DEFINE_integer('batch', 64, 'Batch size')
-tf.app.flags.DEFINE_integer('steps', 500, 'Number of training iterations')
+tf.app.flags.DEFINE_integer('batch', 32, 'Batch size')
+tf.app.flags.DEFINE_integer('steps', 100, 'Number of training iterations')
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -25,6 +25,8 @@ def pool(x):
   return cnn.max_pool(x, 2, 2)
 
 def inference(images):
+  tf.image_summary('input', images, max_images=3)
+
   with tf.variable_scope('pool1'):
     conv1 = conv(images, [3, 64], 'conv1')
     conv2 = conv(conv1, [64, 64], 'conv2')
@@ -81,6 +83,7 @@ def inference(images):
     deconv12 = deconv(unpool5, [64, 64], 'deconv2')
     deconv13 = deconv(deconv12, [3, 64], 'deconv1')
 
+  tf.image_summary('output', deconv13, max_images=3)
   return deconv13
 
 def train():
