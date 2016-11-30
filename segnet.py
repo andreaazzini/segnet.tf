@@ -5,14 +5,15 @@ from upsample import upsample
 import convnet as cnn
 import initializer
 import tensorflow as tf
+import utils
 
 tf.app.flags.DEFINE_string('train', './input/train.tfrecords', 'Train data')
 tf.app.flags.DEFINE_string('train_labels', './input/train_labels.tfrecords', 'Train labels data')
 tf.app.flags.DEFINE_string('train_logs', './logs/train', 'Log directory')
 tf.app.flags.DEFINE_string('labels_file', '../labels', 'Labels file')
 
-tf.app.flags.DEFINE_integer('batch', 32, 'Batch size')
-tf.app.flags.DEFINE_integer('steps', 100, 'Number of training iterations')
+tf.app.flags.DEFINE_integer('batch', 12, 'Batch size')
+tf.app.flags.DEFINE_integer('steps', 20, 'Number of training iterations')
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -128,28 +129,30 @@ def train():
   optimizer = tf.train.AdamOptimizer(1e-04)
   train_step = optimizer.minimize(cross_entropy)
 
-  init = tf.initialize_all_variables()
-  sess = tf.InteractiveSession()
-  summary = tf.merge_all_summaries()
-  summary_writer = tf.train.SummaryWriter(FLAGS.train_logs, sess.graph)
-  #sess.run(init)
-  initializer.initialize(autoencoder.get_encoder_parameters(), sess)
-  tf.train.start_queue_runners()
+  config = tf.ConfigProto(allow_soft_placement=True, log_device_placement=True)
+  with tf.Session(config=config) as sess:
+    init = tf.initialize_all_variables()
+    summary = tf.merge_all_summaries()
+    summary_writer = tf.train.SummaryWriter(FLAGS.train_logs, sess.graph)
+    sess.run(init)
+    initializer.initialize(autoencoder.get_encoder_parameters(), sess)
+    tf.train.start_queue_runners()
 
-  for step in tqdm(range(FLAGS.steps + 1)):
-    _, loss_value = sess.run([train_step, loss])
+    for step in tqdm(range(FLAGS.steps + 1)):
+      #_, loss_value = sess.run([train_step, loss])
+      sess.run(train_step)
 
-    if step % 10 == 0:
-      print('Step %d: loss = %.4f' % (step, loss_value))
-      summary_str = sess.run(summary)
-      summary_writer.add_summary(summary_str, step)
-      summary_writer.flush()
+      if step % 200 == 0:
+        #print('Step %d: loss = %.4f' % (step, loss_value))
+        summary_str = sess.run(summary)
+        summary_writer.add_summary(summary_str, step)
+        summary_writer.flush()
 
 def main(argv=None):
-  if tf.gfile.Exists(FLAGS.train_logs):
-    tf.gfile.DeleteRecursively(FLAGS.train_logs)
-  tf.gfile.MakeDirs(FLAGS.train_logs)
-  train()
+  utils.restore_logs(FLAGS.train_logs)
+
+  with tf.device("/gpu:0"):
+    train()
 
 if __name__ == '__main__':
   tf.app.run()
