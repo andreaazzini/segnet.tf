@@ -2,18 +2,20 @@ from inputs import inputs
 from tqdm import tqdm
 from upsample import upsample
 
+import classifier
 import convnet as cnn
 import initializer
 import tensorflow as tf
 import utils
 
 tf.app.flags.DEFINE_string('train', './input/train.tfrecords', 'Train data')
+tf.app.flags.DEFINE_string('train_ckpt', './ckpts/model.ckpt', 'Train checkpoint file')
 tf.app.flags.DEFINE_string('train_labels', './input/train_labels.tfrecords', 'Train labels data')
 tf.app.flags.DEFINE_string('train_logs', './logs/train', 'Log directory')
 tf.app.flags.DEFINE_string('labels_file', '../labels', 'Labels file')
 
 tf.app.flags.DEFINE_integer('batch', 12, 'Batch size')
-tf.app.flags.DEFINE_integer('steps', 20, 'Number of training iterations')
+tf.app.flags.DEFINE_integer('steps', 40000, 'Number of training iterations')
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -33,7 +35,7 @@ class SegNetAutoencoder:
     self.params = []
 
   def encode(self, images):
-    tf.image_summary('input', images, max_images=3)
+    tf.image_summary('input', images)
 
     with tf.variable_scope('pool1'):
       conv1 = conv(images, [3, 64], 'conv1_1')
@@ -92,9 +94,11 @@ class SegNetAutoencoder:
     with tf.variable_scope('unpool5'):
       unpool5 = upsample(deconv11, self.indices[0])
       deconv12 = deconv(unpool5, [64, 64], 'deconv1_2')
-      deconv13 = deconv(deconv12, [3, 64], 'deconv1_1')
+      deconv13 = deconv(deconv12, [32, 64], 'deconv1_1')
 
-    tf.image_summary('output', deconv13, max_images=3)
+    rgb_output = classifier.rgb(deconv13)
+    tf.image_summary('output', rgb_output)
+
     return deconv13
 
   def prepare_encoder_parameters(self):
@@ -120,38 +124,48 @@ def inference(autoencoder, images):
 def train():
   autoencoder = SegNetAutoencoder()
   images, labels = inputs(FLAGS.train, FLAGS.train_labels, FLAGS.batch)
+  one_hot_labels = classifier.one_hot(labels)
+
   logits = inference(autoencoder, images)
 
-  cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits, labels, name='xentropy')
+  cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits, one_hot_labels, name='xentropy')
   loss = tf.reduce_mean(cross_entropy, name='loss')
   tf.scalar_summary(loss.op.name, loss)
 
   optimizer = tf.train.AdamOptimizer(1e-04)
   train_step = optimizer.minimize(cross_entropy)
 
-  config = tf.ConfigProto(allow_soft_placement=True, log_device_placement=True)
+  init = tf.global_variables_initializer()
+  saver = tf.train.Saver()
+  config = tf.ConfigProto(allow_soft_placement=True)
   with tf.Session(config=config) as sess:
-    init = tf.initialize_all_variables()
-    summary = tf.merge_all_summaries()
-    summary_writer = tf.train.SummaryWriter(FLAGS.train_logs, sess.graph)
     sess.run(init)
     initializer.initialize(autoencoder.get_encoder_parameters(), sess)
-    tf.train.start_queue_runners()
+
+    summary = tf.merge_all_summaries()
+    summary_writer = tf.train.SummaryWriter(FLAGS.train_logs, sess.graph)
+
+    coord = tf.train.Coordinator()
+    threads = tf.train.start_queue_runners(sess=sess, coord=coord)
 
     for step in tqdm(range(FLAGS.steps + 1)):
-      #_, loss_value = sess.run([train_step, loss])
       sess.run(train_step)
 
-      if step % 200 == 0:
-        #print('Step %d: loss = %.4f' % (step, loss_value))
+      if step % 10 == 0:
         summary_str = sess.run(summary)
         summary_writer.add_summary(summary_str, step)
         summary_writer.flush()
 
+      if step % 1000 == 0:
+        saver.save(sess, FLAGS.train_ckpt)
+
+    coord.request_stop()
+    coord.join(threads)
+
 def main(argv=None):
   utils.restore_logs(FLAGS.train_logs)
 
-  with tf.device("/gpu:0"):
+  with tf.device('/gpu:0'):
     train()
 
 if __name__ == '__main__':

@@ -1,7 +1,9 @@
 __pycache__/
 logs/
+input/old/
 input/raw/
 input/shuffled/
+ckpts/
 
 *.pyc
 vgg16_weights.npz

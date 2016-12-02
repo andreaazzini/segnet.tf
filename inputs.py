@@ -13,8 +13,8 @@ def read_and_decode_single_example(filename):
     })
 
   image = features['image/encoded']
-  image = tf.cast(tf.image.decode_jpeg(image, 3), tf.float32)
-  image /= 255.
+  image = tf.cast(tf.image.decode_png(image, 3), tf.float32)
+  image /= 255
   image.set_shape([224, 224, 3])
   return image
 
