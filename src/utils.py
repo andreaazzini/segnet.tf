@@ -2,6 +2,10 @@ import os
 import tensorflow as tf
 
 _colors = {
+  'banana': [
+    [255, 255, 255], # banana
+    [0, 0, 0],       # void
+  ],
   'cookeat': [
     [255, 245, 0],   # coke
     [3, 102, 255],   # lemon
