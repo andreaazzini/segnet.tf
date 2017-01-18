@@ -3,7 +3,17 @@ import tensorflow as tf
 
 _colors = {
   'banana': [
-    [255, 255, 255], # banana
+    [159, 165, 171], # banana
+    [255, 255, 255]  # background
+  ],
+  'fruit': [
+    [159, 165, 171], # banana
+    [46, 201, 252],  # coke
+    [241, 186, 235], # pear
+    [255, 255, 255], # background
+  ],
+  'banana-old': [
+    [46, 195, 136],  # banana
     [0, 0, 0],       # void
   ],
   'cookeat': [

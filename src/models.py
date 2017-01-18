@@ -16,7 +16,7 @@ class SegNetAutoencoder:
   def pool(self, x):
     return cnn.max_pool(x, 2, 2)
 
-  def unpool(self, bottom):
+  def oldunpool(self, bottom):
     sh = bottom.get_shape().as_list()
     dim = len(sh[1:-1])
     out = tf.reshape(bottom, [-1] + sh[-dim:])
@@ -24,9 +24,24 @@ class SegNetAutoencoder:
       out = tf.concat(i, [out, tf.zeros_like(out)])
     out_size = [-1] + [s * 2 for s in sh[1:-1]] + [sh[-1]]
     return tf.reshape(out, out_size)
-  
+
+  def unpool(self, x):
+    # https://github.com/tensorflow/tensorflow/issues/2169
+    out = tf.concat_v2([x, tf.zeros_like(x)], 3)
+    out = tf.concat_v2([out, tf.zeros_like(out)], 2)
+
+    sh = x.get_shape().as_list()
+    if None not in sh[1:]:
+      out_size = [-1, sh[1] * 2, sh[2] * 2, sh[3]]
+      return tf.reshape(out, out_size)
+    else:
+      shv = tf.shape(x)
+      ret = tf.reshape(out, tf.stack([-1, shv[1] * 2, shv[2] * 2, sh[3]]))
+      ret.set_shape([None, None, None, sh[3]])
+    return ret
+
   def inference(self, images):
-    # tf.image_summary('input', images, max_images=self.max_images)
+    tf.summary.image('input', images, max_outputs=self.max_images)
 
     with tf.variable_scope('pool1'):
       conv1 = self.conv(images, [3, 64], 'conv1_1')
@@ -85,8 +100,10 @@ class SegNetAutoencoder:
       deconv13 = self.deconv(deconv12, [self.n, 64], 'deconv1_1')
 
     rgb_image = classifier.rgb(deconv13)
-    mask = tf.sign(tf.reduce_max(rgb_image, 3))
-    rgba_image = tf.concat(3, [rgb_image, mask])
-    tf.image_summary('output', rgba_image, max_images=self.max_images)
+    # rgb_image = tf.Print(rgb_image, [rgb_image], summarize=30)
+    mask = tf.reshape(tf.sign(tf.reduce_max(rgb_image, 3)), [-1, 224, 224, 1])
+    # mask = tf.Print(mask, [mask], summarize=30)
+    rgba_image = tf.concat(3, [rgb_image, mask]) * 255
+    tf.summary.image('output', rgba_image, max_outputs=self.max_images)
 
     return deconv13

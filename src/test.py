@@ -27,15 +27,15 @@ def test():
   images = inputs(FLAGS.batch, FLAGS.test)
   #one_hot_labels = classifier.one_hot(labels)
 
-  autoencoder = SegNetAutoencoder(2, max_images=20)
+  autoencoder = SegNetAutoencoder(4)
   logits = autoencoder.inference(images)
 
   #accuracy_op = accuracy(logits, one_hot_labels)
   #tf.scalar_summary('accuracy', accuracy_op)
 
   saver = tf.train.Saver(tf.global_variables())
-  summary = tf.merge_all_summaries()
-  summary_writer = tf.train.SummaryWriter(FLAGS.test_logs)
+  summary = tf.summary.merge_all()
+  summary_writer = tf.summary.FileWriter(FLAGS.test_logs)
 
   with tf.Session() as sess:
     coord = tf.train.Coordinator()
