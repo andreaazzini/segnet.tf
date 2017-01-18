@@ -16,8 +16,10 @@ tf.app.flags.DEFINE_string('ckpt_dir', './ckpts', 'Train checkpoint directory')
 tf.app.flags.DEFINE_string('train_labels', train_labels_file, 'Train labels data')
 tf.app.flags.DEFINE_string('train_logs', './logs/train', 'Log directory')
 
+tf.app.flags.DEFINE_boolean('strided', True, 'Use strided convolutions and deconvolutions')
+
 tf.app.flags.DEFINE_integer('batch', 12, 'Batch size')
-tf.app.flags.DEFINE_integer('steps', 200, 'Number of training iterations')
+tf.app.flags.DEFINE_integer('steps', 1000, 'Number of training iterations')
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -34,20 +36,21 @@ def train():
   images, labels = inputs(FLAGS.batch, FLAGS.train, FLAGS.train_labels)
   one_hot_labels = classifier.one_hot(labels)
 
-  autoencoder = SegNetAutoencoder(2)
+  autoencoder = SegNetAutoencoder(4, strided=FLAGS.strided)
   logits = autoencoder.inference(images)
 
   accuracy_op = accuracy(logits, one_hot_labels)
   loss_op = loss(logits, one_hot_labels)
-  tf.scalar_summary('accuracy', accuracy_op)
-  tf.scalar_summary(loss_op.op.name, loss_op)
+  tf.summary.scalar('accuracy', accuracy_op)
+  tf.summary.scalar(loss_op.op.name, loss_op)
 
   optimizer = tf.train.AdamOptimizer(1e-04)
   train_step = optimizer.minimize(loss_op)
 
   init = tf.global_variables_initializer()
   saver = tf.train.Saver()
-  config = tf.ConfigProto(allow_soft_placement=True, log_device_placement=True)
+  gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.7)
+  config = tf.ConfigProto(allow_soft_placement=True, gpu_options=gpu_options)
   config.gpu_options.allow_growth = True
 
   ckpt = tf.train.get_checkpoint_state(FLAGS.ckpt_dir)
@@ -62,11 +65,12 @@ def train():
       # initializer.initialize(autoencoder.get_encoder_parameters(), sess)
     else:
       global_step = len(ckpt.all_model_checkpoint_paths) * FLAGS.steps
+      print(global_step)
       ckpt_path = ckpt.model_checkpoint_path
       saver.restore(sess, ckpt_path)
 
-    summary = tf.merge_all_summaries()
-    summary_writer = tf.train.SummaryWriter(FLAGS.train_logs, sess.graph)
+    summary = tf.summary.merge_all()
+    summary_writer = tf.summary.FileWriter(FLAGS.train_logs, sess.graph)
 
     coord = tf.train.Coordinator()
     threads = tf.train.start_queue_runners(sess=sess, coord=coord)
