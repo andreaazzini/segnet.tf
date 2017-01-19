@@ -1,43 +1,43 @@
 from inputs import inputs
 from models import SegNetAutoencoder
+from scalar_ops import accuracy, loss
 
 import classifier
 import config
 import tensorflow as tf
 import utils
 
-test_file = utils.get_test_set(config.working_dataset)
+test_file, test_labels_file = utils.get_test_set(config.working_dataset, include_labels=True)
 
-tf.app.flags.DEFINE_string('test', test_file, 'Test data')
 tf.app.flags.DEFINE_string('ckpt_dir', './ckpts', 'Train checkpoint directory')
-# tf.app.flags.DEFINE_string('test_labels', './input/test_labels.tfrecords', 'Test labels data')
+tf.app.flags.DEFINE_string('test', test_file, 'Test data')
+tf.app.flags.DEFINE_string('test_labels', test_labels_file, 'Test labels data')
 tf.app.flags.DEFINE_string('test_logs', './logs/test', 'Log directory')
 
-tf.app.flags.DEFINE_integer('batch', 35, 'Batch size')
+tf.app.flags.DEFINE_boolean('strided', True, 'Use strided convolutions and deconvolutions')
+
+tf.app.flags.DEFINE_integer('batch', 200, 'Batch size')
 
 FLAGS = tf.app.flags.FLAGS
 
-def accuracy(logits, labels):
-  equal_pixels = tf.reduce_sum(tf.to_float(tf.equal(logits, labels)))
-  total_pixels = tf.to_float(tf.reduce_prod(tf.shape(logits)))
-  return equal_pixels / total_pixels
-
 def test():
-  #images, labels = inputs(FLAGS.batch, FLAGS.test, FLAGS.test_labels)
-  images = inputs(FLAGS.batch, FLAGS.test)
-  #one_hot_labels = classifier.one_hot(labels)
+  images, labels = inputs(FLAGS.batch, FLAGS.test, FLAGS.test_labels)
+  tf.summary.image('labels', labels)
+  one_hot_labels = classifier.one_hot(labels)
 
-  autoencoder = SegNetAutoencoder(2, max_images=20)
+  autoencoder = SegNetAutoencoder(4, strided=FLAGS.strided)
   logits = autoencoder.inference(images)
 
-  #accuracy_op = accuracy(logits, one_hot_labels)
-  #tf.scalar_summary('accuracy', accuracy_op)
+  accuracy_op = accuracy(logits, one_hot_labels, FLAGS.batch)
+  tf.scalar_summary('accuracy', accuracy_op)
 
   saver = tf.train.Saver(tf.global_variables())
   summary = tf.merge_all_summaries()
   summary_writer = tf.train.SummaryWriter(FLAGS.test_logs)
 
-  with tf.Session() as sess:
+  gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=config.gpu_memory_fraction)
+  session_config = tf.ConfigProto(allow_soft_placement=True, gpu_options=gpu_options)
+  with tf.Session(config=session_config) as sess:
     coord = tf.train.Coordinator()
     threads = tf.train.start_queue_runners(sess=sess, coord=coord)
 
@@ -50,7 +50,6 @@ def test():
     ckpt_path = ckpt.model_checkpoint_path
     saver.restore(sess, ckpt_path)
 
-    #accuracy_value, summary_str = sess.run([accuracy_op, summary])
     summary_str = sess.run(summary)
     summary_writer.add_summary(summary_str)
     summary_writer.flush()
