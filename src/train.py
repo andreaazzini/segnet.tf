@@ -34,8 +34,8 @@ def train():
 
   accuracy_op = accuracy(logits, one_hot_labels, FLAGS.batch)
   loss_op = loss(logits, one_hot_labels)
-  tf.scalar_summary('accuracy', accuracy_op)
-  tf.scalar_summary(loss_op.op.name, loss_op)
+  tf.summary.scalar('accuracy', accuracy_op)
+  tf.summary.scalar(loss_op.op.name, loss_op)
 
   optimizer = tf.train.AdamOptimizer(1e-04)
   train_step = optimizer.minimize(loss_op)
@@ -59,8 +59,8 @@ def train():
       ckpt_path = ckpt.model_checkpoint_path
       saver.restore(sess, ckpt_path)
 
-    summary = tf.merge_all_summaries()
-    summary_writer = tf.train.SummaryWriter(FLAGS.train_logs, sess.graph)
+    summary = tf.summary.merge_all()
+    summary_writer = tf.summary.FileWriter(FLAGS.train_logs, sess.graph)
 
     coord = tf.train.Coordinator()
     threads = tf.train.start_queue_runners(sess=sess, coord=coord)

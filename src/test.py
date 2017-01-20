@@ -29,11 +29,11 @@ def test():
   logits = autoencoder.inference(images)
 
   accuracy_op = accuracy(logits, one_hot_labels, FLAGS.batch)
-  tf.scalar_summary('accuracy', accuracy_op)
+  tf.summary.scalar('accuracy', accuracy_op)
 
   saver = tf.train.Saver(tf.global_variables())
-  summary = tf.merge_all_summaries()
-  summary_writer = tf.train.SummaryWriter(FLAGS.test_logs)
+  summary = tf.summary.merge_all()
+  summary_writer = tf.summary.FileWriter(FLAGS.test_logs)
 
   gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=config.gpu_memory_fraction)
   session_config = tf.ConfigProto(allow_soft_placement=True, gpu_options=gpu_options)
