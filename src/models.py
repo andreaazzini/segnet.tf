@@ -61,11 +61,8 @@ class SegNetAutoencoder:
       conv13 = self.conv(conv12, [512, 512], 'conv5_3')
       pool5 = self.pool(conv13)
 
-    return pool5
-
-  def decode(self, code):
     with tf.variable_scope('unpool1'):
-      unpool1 = self.unpool(code)
+      unpool1 = self.unpool(pool5)
       deconv1 = self.deconv(unpool1, [512, 512], 'deconv5_3')
       deconv2 = self.deconv(deconv1, [512, 512], 'deconv5_2')
       deconv3 = self.deconv(deconv2, [512, 512], 'deconv5_1')

@@ -2,7 +2,7 @@ import config
 import tensorflow as tf
 import utils
 
-colors = tf.cast(tf.pack(utils.colors_of_dataset(config.working_dataset)), tf.float32) / 255
+colors = tf.cast(tf.stack(utils.colors_of_dataset(config.working_dataset)), tf.float32) / 255
 
 def color_mask(tensor, color):
   return tf.reduce_all(tf.equal(tensor, color), 3)
