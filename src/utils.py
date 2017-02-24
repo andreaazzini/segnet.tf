@@ -1,9 +1,18 @@
+from models import MiniAutoencoder, SegNetAutoencoder
+
 import config
 import os
 import tensorflow as tf
 
 def colors_of_dataset(dataset_name):
   return config.colors[dataset_name]
+
+def get_autoencoder(autoencoder_name):
+  autoencoders = {
+    'mini': MiniAutoencoder,
+    'segnet': SegNetAutoencoder
+  }
+  return autoencoders[autoencoder_name]
 
 def get_dataset(dataset_name, include_labels, kind):
   path = os.path.join('input', dataset_name)

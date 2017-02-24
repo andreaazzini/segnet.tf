@@ -2,7 +2,7 @@ import classifier
 import convnet as cnn
 import tensorflow as tf
 
-class SegNetAutoencoder:
+class Autoencoder:
   def __init__(self, n, strided=False, max_images=3):
     self.max_images = max_images
     self.n = n
@@ -30,6 +30,49 @@ class SegNetAutoencoder:
     resized = tf.image.resize_nearest_neighbor(x, [height, width])
     return cnn.conv(resized, [3, 3], channels_shape, 1, name, repad=True)
 
+  def inference(self, images):
+    if self.strided:
+      return self.strided_inference(images)
+    return self.inference_with_pooling(images)
+
+class MiniAutoencoder(Autoencoder):
+  def __init__(self, n):
+    Autoencoder.__init__(self, n, strided=True)
+
+  def strided_inference(self, images):
+    tf.summary.image('input', images, max_outputs=self.max_images)
+
+    with tf.variable_scope('encode1'):
+      conv1 = self.conv(images, [3, 64], 'conv1_1')
+      conv2 = self.conv2(conv1, [64, 64], 'conv1_2')
+
+    with tf.variable_scope('encode2'):
+      conv3 = self.conv(conv2, [64, 128], 'conv2_1')
+      conv4 = self.conv2(conv3, [128, 128], 'conv2_2')
+
+    with tf.variable_scope('encode3'):
+      conv5 = self.conv(conv4, [128, 256], 'conv3_1')
+      conv6 = self.conv(conv5, [256, 256], 'conv3_2')
+      conv7 = self.conv2(conv6, [256, 256], 'conv3_3')
+
+    with tf.variable_scope('decode1'):
+      deconv7 = self.resize_conv(conv7, [256, 256], 'deconv3_3')
+      deconv6 = self.deconv(deconv7, [256, 256], 'deconv3_2')
+      deconv5 = self.deconv(deconv6, [128, 256], 'deconv3_1')
+
+    with tf.variable_scope('decode2'):
+      deconv4 = self.resize_conv(deconv5, [128, 128], 'deconv2_2')
+      deconv3 = self.deconv(deconv4, [64, 128], 'deconv2_1')
+
+    with tf.variable_scope('decode3'):
+      deconv2 = self.resize_conv(deconv3, [64, 64], 'deconv1_2')
+      deconv1 = self.deconv(deconv2, [self.n, 64], 'deconv1_1')
+
+    rgb_image = classifier.rgb(deconv1)
+    tf.summary.image('output', rgb_image, max_outputs=self.max_images)
+    return deconv1
+
+class SegNetAutoencoder(Autoencoder):
   def inference_with_pooling(self, images):
     tf.summary.image('input', images, max_outputs=self.max_images)
 
@@ -145,8 +188,3 @@ class SegNetAutoencoder:
     rgb_image = classifier.rgb(deconv13)
     tf.summary.image('output', rgb_image, max_outputs=self.max_images)
     return deconv13
-
-  def inference(self, images):
-    if self.strided:
-      return self.strided_inference(images)
-    return self.inference_with_pooling(images)

@@ -7,6 +7,7 @@ SegNet is a TensorFlow implementation of the [segmentation network proposed by K
 Create a `config.py` file, containing color maps, working dataset and other options.
 
 ```
+autoencoder = 'segnet'
 colors = {
   'segnet-32': [
     [64, 128, 64],   # Animal
