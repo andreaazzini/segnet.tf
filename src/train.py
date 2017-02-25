@@ -1,5 +1,4 @@
 from inputs import inputs
-from models import SegNetAutoencoder
 from scalar_ops import accuracy, loss
 from tqdm import tqdm
 
@@ -29,7 +28,7 @@ def train():
   tf.summary.image('labels', labels)
   one_hot_labels = classifier.one_hot(labels)
 
-  autoencoder = SegNetAutoencoder(4, strided=FLAGS.strided)
+  autoencoder = utils.get_autoencoder(config.autoencoder)(4)
   logits = autoencoder.inference(images)
 
   accuracy_op = accuracy(logits, one_hot_labels, FLAGS.batch)
