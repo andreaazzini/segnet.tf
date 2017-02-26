@@ -7,12 +7,13 @@ import tensorflow as tf
 def colors_of_dataset(dataset_name):
   return config.colors[dataset_name]
 
-def get_autoencoder(autoencoder_name):
+def get_autoencoder(autoencoder_name, dataset_name, strided):
+  n_labels = len(colors_of_dataset(dataset_name))
   autoencoders = {
     'mini': MiniAutoencoder,
     'segnet': SegNetAutoencoder
   }
-  return autoencoders[autoencoder_name]
+  return autoencoders[autoencoder_name](n_labels, strided=strided)
 
 def get_dataset(dataset_name, include_labels, kind):
   path = os.path.join('input', dataset_name)

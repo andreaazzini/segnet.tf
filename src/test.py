@@ -13,8 +13,6 @@ tf.app.flags.DEFINE_string('test', test_file, 'Test data')
 tf.app.flags.DEFINE_string('test_labels', test_labels_file, 'Test labels data')
 tf.app.flags.DEFINE_string('test_logs', './logs/test', 'Log directory')
 
-tf.app.flags.DEFINE_boolean('strided', True, 'Use strided convolutions and deconvolutions')
-
 tf.app.flags.DEFINE_integer('batch', 200, 'Batch size')
 
 FLAGS = tf.app.flags.FLAGS
@@ -24,10 +22,10 @@ def test():
   tf.summary.image('labels', labels)
   one_hot_labels = classifier.one_hot(labels)
 
-  autoencoder = utils.get_autoencoder(config.autoencoder)(4)
+  autoencoder = utils.get_autoencoder(config.autoencoder, config.working_dataset, config.strided)
   logits = autoencoder.inference(images)
 
-  accuracy_op = accuracy(logits, one_hot_labels, FLAGS.batch)
+  accuracy_op = accuracy(logits, one_hot_labels)
   tf.summary.scalar('accuracy', accuracy_op)
 
   saver = tf.train.Saver(tf.global_variables())
