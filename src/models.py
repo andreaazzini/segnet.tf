@@ -36,8 +36,8 @@ class Autoencoder:
     return self.inference_with_pooling(images)
 
 class MiniAutoencoder(Autoencoder):
-  def __init__(self, n):
-    Autoencoder.__init__(self, n, strided=True)
+  def __init__(self, n, strided=True, max_images=3):
+    Autoencoder.__init__(self, n, strided=strided, max_images=max_images)
 
   def strided_inference(self, images):
     tf.summary.image('input', images, max_outputs=self.max_images)
@@ -73,6 +73,9 @@ class MiniAutoencoder(Autoencoder):
     return deconv1
 
 class SegNetAutoencoder(Autoencoder):
+  def __init__(self, n, strided=False, max_images=3):
+    Autoencoder.__init__(self, n, strided=strided, max_images=max_images)
+
   def inference_with_pooling(self, images):
     tf.summary.image('input', images, max_outputs=self.max_images)
 

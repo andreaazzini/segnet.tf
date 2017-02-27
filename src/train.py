@@ -15,8 +15,6 @@ tf.app.flags.DEFINE_string('train_ckpt', './ckpts/model.ckpt', 'Train checkpoint
 tf.app.flags.DEFINE_string('train_labels', train_labels_file, 'Train labels data')
 tf.app.flags.DEFINE_string('train_logs', './logs/train', 'Log directory')
 
-tf.app.flags.DEFINE_boolean('strided', True, 'Use strided convolutions and deconvolutions')
-
 tf.app.flags.DEFINE_integer('summary_step', 10, 'Number of iterations before serializing log data')
 tf.app.flags.DEFINE_integer('batch', 12, 'Batch size')
 tf.app.flags.DEFINE_integer('steps', 10000, 'Number of training iterations')
@@ -28,10 +26,10 @@ def train():
   tf.summary.image('labels', labels)
   one_hot_labels = classifier.one_hot(labels)
 
-  autoencoder = utils.get_autoencoder(config.autoencoder)(4)
+  autoencoder = utils.get_autoencoder(config.autoencoder, config.working_dataset, config.strided)
   logits = autoencoder.inference(images)
 
-  accuracy_op = accuracy(logits, one_hot_labels, FLAGS.batch)
+  accuracy_op = accuracy(logits, one_hot_labels)
   loss_op = loss(logits, one_hot_labels)
   tf.summary.scalar('accuracy', accuracy_op)
   tf.summary.scalar(loss_op.op.name, loss_op)
